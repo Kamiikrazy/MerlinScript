@@ -2,121 +2,20 @@
 #include <ctype.h>
 #include <string.h>
 #include <stdlib.h>
+#include "defs.h"
 
-char src[] = "public function main(a: int, b: int) { return a + b; }";
+char src[] = "int balls = 10;";
 int line;
-
-typedef enum {
-    Num, Fn, Pub, Loc, If, Else, Orif, Return, Try, While, For, Pass, Break, Do,
-    String, Int, Float, Bool, Null, True, False, Module, Or, And, Not, Eq, Ne, Eqeq, Lt, Gt, Le, Ge,
-    Add, Sub, Mul, Div, Mod, Inc, Dec, Muleq, Diveq, 
-    Dot, Comma, Semcol, Col, Dbcol, Bsl, Dbbsl, Dbfsl, Hash, Opb, Clb, Opclb, Clclb,
-    Huh,
-} Token;
-
-const char *keywords[] = {
-    "function", "for", "do", "if", "orif", "otherwise", "try", "while", "return", "public", "private",
-    "int", "string", "float", "bool", "Null", "any", "True", "False", "module",
-};
-
-const char *operators[] = {
-    "+", "-", "/", "*", "=", "=/=", "==", "+=", "-=", "/=", "*=", "<", 
-    ">", "<=", ">=", "%", "&", "||", "!"
-};
-
-const char *punctuation[] = {
-    ".", ",", ";", ":", "::", "\\", "\\\\", "//", "#", "(", ")", "{", "}",
-};
-
-#define NUM_KEYWORDS (sizeof(keywords) / sizeof(keywords[0]))
-#define NUM_OPERATORS (sizeof(operators) / sizeof(operators[0]))
-
-typedef struct {
-    Token type;
-    char *value;
-    int line;
-} MToken;
-
-typedef struct {
-    MToken *tokens;
-    int count;
-    int capacity; 
-} TokenList;
-
-Token classifyKeyword(const char *str) {
-    if (strcmp(str, "function") == 0) return Fn;
-    if (strcmp(str, "public") == 0) return Pub;
-    if (strcmp(str, "private") == 0) return Loc;
-    if (strcmp(str, "if") == 0) return If;
-    if (strcmp(str, "otherwise") == 0) return Else;
-    if (strcmp(str, "return") == 0) return Return;
-    if (strcmp(str, "orif") == 0) return Orif;
-    if (strcmp(str, "try") == 0) return Try;
-    if (strcmp(str, "while") == 0) return While;
-    if (strcmp(str, "do") == 0) return Do;
-    if (strcmp(str, "string") == 0) return String;
-    if (strcmp(str, "int") == 0) return Int;
-    if (strcmp(str, "float") == 0) return Float;
-    if (strcmp(str, "bool") == 0) return Bool;
-    if (strcmp(str, "True") == 0) return True;
-    if (strcmp(str, "False") == 0) return False;
-    if (strcmp(str, "Null") == 0) return Null;
-    if (strcmp(str, "module") == 0) return Module;
-    return Huh;
-}
-
-Token classifyOperator(const char *str, int length) {
-    if (length == 3 && strncmp(str, "=/=", 3) == 0) return Ne;
-    if (length == 2) {
-        if (strncmp(str, "==", 2) == 0) return Eqeq;
-        if (strncmp(str, "<=", 2) == 0) return Le;
-        if (strncmp(str, ">=", 2) == 0) return Ge;
-        if (strncmp(str, "*=", 2) == 0) return Muleq;
-        if (strncmp(str, "+=", 2) == 0) return Inc;
-        if (strncmp(str, "-=", 2) == 0) return Dec;
-        if (strncmp(str, "/=", 2) == 0) return Diveq;
-        if (strncmp(str, "||", 2) == 0) return Or;
-    }
-    if (length == 1) {
-        if (*str == '+') return Add;
-        if (*str == '-') return Sub;
-        if (*str == '*') return Mul;
-        if (*str == '/') return Div;
-        if (*str == '=') return Eq;
-        if (*str == '<') return Lt;
-        if (*str == '>') return Gt;
-        if (*str == '!') return Not;
-        if (*str == '%') return Mod;
-        if (*str == '&') return And;
-    }
-    return Huh;
-}
-
-Token classifyPunctuation(const char *str, int length) {
-    if (length == 2) {
-        if (strncmp(str, "\\\\", 2) == 0) return Dbbsl;
-        if (strncmp(str, "//", 2) == 0) return Dbfsl;
-        if (strncmp(str, "::", 2) == 0) return Dbcol;
-    }
-    if (length == 1) {
-        if (*str == ',') return Comma;
-        if (*str == '.') return Dot;
-        if (*str == ';') return Semcol;
-        if (*str == ':') return Col;
-        if (*str == '\\') return Bsl;
-        if (*str == '#') return Hash;
-        if (*str == '(') return Opb;
-        if (*str == ')') return Clb;
-        if (*str == '{') return Opclb;
-        if (*str == '}') return Clclb;
-    }
-    return Huh;
-}
 
 void addToTokenList(TokenList *list, MToken token, const char *value) {
     if (list->count == list->capacity) {
         list->capacity = list->capacity == 0 ? 10 : list->capacity * 2;
-        list->tokens = realloc(list->tokens, list->capacity * sizeof(MToken));
+        void *temp = realloc(list->tokens, list->capacity * sizeof(MToken));
+        if (!temp) {
+            fprintf(stderr, "Failed to allocate memory for TokenList\n");
+            exit(EXIT_FAILURE);
+        }
+        list->tokens = temp;
     }
 
     list->tokens[list->count++] = token;
@@ -182,12 +81,16 @@ void lexer(TokenList *list) {
             }
             int length = c - start;
 
-            token.value = strndup(start, length);
+            token.value = malloc(length + 1);
+                if (token.value) {
+                    strncpy(token.value, start, length);
+                    token.value[length] = '\0';
+                }
 
             if (isKeyword(token.value)) {
                 token.type = classifyKeyword(token.value);
             } else {
-                token.type = Loc;
+                token.type = Iden;
             }
 
             addToTokenList(list, token, token.value);
@@ -198,7 +101,11 @@ void lexer(TokenList *list) {
             }
             int length = c - start;
 
-            token.value = strndup(start, length);
+            token.value = malloc(length + 1);
+                if (token.value) {
+                    strncpy(token.value, start, length);
+                    token.value[length] = '\0';
+                }
             token.type = Num;
 
             addToTokenList(list, token, token.value);
@@ -212,7 +119,11 @@ void lexer(TokenList *list) {
 
             c += length;
 
-            token.value = strndup(start, length);
+            token.value = malloc(length + 1);
+                 if (token.value) {
+                     strncpy(token.value, start, length);
+                     token.value[length] = '\0';
+                 }
             token.type = classifyOperator(token.value, length);
 
             addToTokenList(list, token, token.value);
@@ -221,7 +132,11 @@ void lexer(TokenList *list) {
             int length = isPunctuation(c, 2) ? 2 : 1;
             c += length;
 
-            token.value = strndup(start, length);
+            token.value = malloc(length + 1);
+                 if (token.value) {
+                     strncpy(token.value, start, length);
+                     token.value[length] = '\0';
+                 }
             token.type = classifyPunctuation(token.value, length);
 
             addToTokenList(list, token, token.value);
