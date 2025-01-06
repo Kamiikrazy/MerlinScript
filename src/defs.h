@@ -1,7 +1,7 @@
 #include <string.h>
 
 typedef enum {
-    Num, Iden, Fn, Pub, Loc, If, Else, Orif, Return, Try, While, For, Pass, Break, Do, Var,
+    Num, Iden, Fn, Pub, Loc, If, Else, Orif, Return, Try, While, For, Pass, Break, Do, Var, Catch,
     String, Int, Float, Bool, Null, True, False, Module, Or, And, Not, Eq, Ne, Eqeq, Lt, Gt, Le, Ge,
     Add, Sub, Mul, Div, Mod, Inc, Dec, Muleq, Diveq,
     Dot, Comma, Semcol, Col, Dbcol, Bsl, Dbbsl, Dbfsl, Hash, Opb, Clb, Opclb, Clclb,
@@ -56,7 +56,8 @@ Token classifyKeyword(const char *str) {
     if (strcmp(str, "False") == 0) return False;
     if (strcmp(str, "Null") == 0) return Null;
     if (strcmp(str, "module") == 0) return Module;
-    if (strcmp(str, "var") == 0) return Var;
+    if (strcmp(str, "let") == 0) return Var;
+    if (strcmp(str, "catch") == 0) return Catch;
     return Huh;
 }
 

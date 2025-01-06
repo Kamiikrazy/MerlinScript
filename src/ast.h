@@ -2,6 +2,82 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+// Define the different nodes
+typedef enum {
+  AST_LITERAL,
+  AST_BINARY_EXPR,
+  AST_UNARY_EXPR,
+  AST_VAR_DECL,
+  AST_FUNC_DECL,
+  AST_BLOCK,
+  AST_IF,
+  AST_WHILE,
+  AST_FOR,
+  AST_TRY,
+  AST_VAR_REF,
+  AST_MODULE,
+} ASTNodeType;
+
+typedef struct ASTNode {
+  ASTNodeType type;
+  int line;
+  union {
+    struct {
+      const char *value;
+    } literal;
+
+    struct {
+      struct ASTNode *left;
+      struct ASTNode *right;
+      Token op;
+    } binaryExpr;                // +, -, /, * ...
+
+    struct {
+      const char *varName;
+      struct ASTNode *val;
+    } varDecl;
+
+    struct {
+      const char *varName;
+    } varRef;
+
+    struct {
+      struct ASTNode *ifBlock;
+      struct ASTNode *thenBlock;
+      struct ASTNode *elseBlock; // Optional
+      struct ASTNode *doBlock;   // Optional
+    } ifBlock;
+
+    struct {
+      struct ASTNode *whileBlock;
+      struct ASTNode *doBlock;
+      struct ASTNode *body;
+    } whileBlock;
+
+    struct {
+      struct ASTNode *forBlock;
+      struct ASTNode *doBlock;
+      struct ASTNode *body;
+    } forBlock;
+
+    struct {
+      struct ASTNode *tryBlock;
+      struct ASTNode *tryBody;
+      struct ASTNode *catchBlock;
+      struct ASTNode *catchBody;
+    } tryBlock;
+
+    struct {
+      struct ASTNode *module;
+      struct ASTNode *package;
+    } moduleBlock;
+
+    struct {
+      struct ASTNode **statements;
+      int count;
+    } block;
+  } as;
+} ASTNode;
 
 typedef struct {
   TokenList *tokens;
