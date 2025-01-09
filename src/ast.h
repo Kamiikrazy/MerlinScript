@@ -15,7 +15,6 @@ typedef enum {
   AST_FOR,
   AST_TRY,
   AST_VAR_REF,
-  AST_MODULE,
 } ASTNodeType;
 
 typedef struct ASTNode {
@@ -24,13 +23,13 @@ typedef struct ASTNode {
   union {
     struct {
       const char *value;
-    } literal;
+    } literal;                      // Constants
 
     struct {
       struct ASTNode *left;
       struct ASTNode *right;
       Token op;
-    } binaryExpr;                // +, -, /, * ...
+    } binaryExpr;                   // +, -, /, * ...
 
     struct {
       const char *varName;
@@ -43,9 +42,8 @@ typedef struct ASTNode {
 
     struct {
       struct ASTNode *ifBlock;
-      struct ASTNode *thenBlock;
-      struct ASTNode *elseBlock; // Optional
-      struct ASTNode *doBlock;   // Optional
+      struct ASTNode *elseifBlock;  // Optional
+      struct ASTNode *elseBlock;    // Optional
     } ifBlock;
 
     struct {
@@ -68,13 +66,9 @@ typedef struct ASTNode {
     } tryBlock;
 
     struct {
-      struct ASTNode *module;
-      struct ASTNode *package;
-    } moduleBlock;
-
-    struct {
       struct ASTNode **statements;
       int count;
+      int capacity;
     } block;
   } as;
 } ASTNode;
@@ -110,6 +104,60 @@ int match(Parser *p, Token type) {
 
 int expect(Parser *p, Token type) {
   if (match(p, type)) return 1;
-  fprintf(stderr, "Expected %d, got %d\n", type, currentToken(p)->type);
+  fprintf(stderr, "Expected %d got %d\n", type, currentToken(p)->type);
   exit(EXIT_FAILURE);
+}
+
+ASTNode *parseExpression(Parser *p) {
+  // I'll do this later
+  return NULL;
+}
+
+ASTNode *primaryParser(Parser *p) {
+  // Parses the main body of the code
+  // Does not include expressions!!
+  MToken *token = currentToken(p);
+  if (token->type == Iden) {
+    // Variable reference
+    ASTNode *node = malloc(sizeof(ASTNode));
+    node->type = AST_VAR_REF;
+    node->as.varRef.varName = token->value;
+    advance(p);
+    return node;
+  }
+  if (token->type == Num || token->type == String || token->type == Bool || token->type == Null || token->type == Float) {
+    // Constant values
+    ASTNode *node = malloc(sizeof(ASTNode));
+    node->type = AST_LITERAL;
+    node->as.literal.value = token->value;
+    advance(p);
+    return node;
+  }
+  if (token->type == Opclb) {
+    // Blocks of code (for loops, if statements, etc.)
+    expect(p, Opclb);
+    ASTNode *block = malloc(sizeof(ASTNode));
+    block->type = AST_BLOCK;
+    block->as.block.statements = malloc(sizeof(ASTNode *)*10);
+    block->as.block.count = 0;
+    block->as.block.capacity = 10;
+
+    while (currentToken(p)->type != Clclb) {
+      if (block->as.block.count == block->as.block.capacity) {
+        block->as.block.capacity *= 2;
+        block->as.block.statements = realloc(block->as.block.statements, block->as.block.capacity * sizeof(ASTNode *));
+      }
+      block->as.block.statements[block->as.block.count++] = parseExpression(p);
+    }
+    expect(p, Clclb);
+    return block;
+  }
+  if (token->type == If) {
+    // If statements
+    expect(p, If);
+    expect(p, Opb);
+    ASTNode *condition = parseExpression(p);
+    expect(p, Clb);
+    expect(p, Do);
+  }
 }
