@@ -42,28 +42,24 @@ typedef struct ASTNode {
 
     struct {
       struct ASTNode *ifBlock;
-      struct ASTNode *elseifBlock;  // Optional
+      struct ASTNode **elifs;       // Optional
+      int elifCount;
       struct ASTNode *elseBlock;    // Optional
-    } ifBlock;
+    } ifStatement;
 
     struct {
       struct ASTNode *whileBlock;
-      struct ASTNode *doBlock;
-      struct ASTNode *body;
-    } whileBlock;
+    } whileStatement;
 
     struct {
       struct ASTNode *forBlock;
-      struct ASTNode *doBlock;
       struct ASTNode *body;
-    } forBlock;
+    } forStatement;
 
     struct {
       struct ASTNode *tryBlock;
-      struct ASTNode *tryBody;
       struct ASTNode *catchBlock;
-      struct ASTNode *catchBody;
-    } tryBlock;
+    } tryStatement;
 
     struct {
       struct ASTNode **statements;
@@ -90,7 +86,7 @@ void advance(Parser *p) {
   p->current++;
 }
 
-void error(const char *msg) {
+void throwError(const char *msg) {
   fprintf(stderr, "Error: %s\n", msg);
 }
 
@@ -108,9 +104,25 @@ int expect(Parser *p, Token type) {
   exit(EXIT_FAILURE);
 }
 
-ASTNode *parseExpression(Parser *p) {
-  // I'll do this later
-  return NULL;
+ASTNode *parseCondition(Parser *p) {
+
+}
+
+ASTNode *parseBlock(Parser *p) {
+  ASTNode *block = malloc(sizeof(ASTNode));
+  block->type = AST_BLOCK;
+  block->as.block.statements = malloc(sizeof(ASTNode *)*10);
+  block->as.block.count = 0;
+  block->as.block.capacity = 10;
+
+  while (currentToken(p)->type != Clclb) {
+    if (block->as.block.count == block->as.block.capacity) {
+      block->as.block.capacity *= 2;
+      block->as.block.statements = realloc(block->as.block.statements, block->as.block.capacity * sizeof(ASTNode *));
+    }
+    block->as.block.statements[block->as.block.count++] = parseCondition(p);
+  }
+  return block;
 }
 
 ASTNode *primaryParser(Parser *p) {
@@ -147,17 +159,71 @@ ASTNode *primaryParser(Parser *p) {
         block->as.block.capacity *= 2;
         block->as.block.statements = realloc(block->as.block.statements, block->as.block.capacity * sizeof(ASTNode *));
       }
-      block->as.block.statements[block->as.block.count++] = parseExpression(p);
+      block->as.block.statements[block->as.block.count++] = parseCondition(p);
     }
     expect(p, Clclb);
     return block;
   }
   if (token->type == If) {
     // If statements
+    /*
+    if (condition) do {
+      ...
+    } otherwise if (condition) do {
+      ...
+    } otherwise do {
+      ...
+    }
+    */
+    ASTNode *ifNode = malloc(sizeof(ASTNode));
+    ifNode->type = AST_IF;
+
     expect(p, If);
     expect(p, Opb);
-    ASTNode *condition = parseExpression(p);
+    ASTNode *condition = parseCondition(p);
     expect(p, Clb);
     expect(p, Do);
+
+    ifNode->as.ifStatement.ifBlock = parseBlock(p);
+
+    ifNode->as.ifStatement.elifs = NULL;
+    ifNode->as.ifStatement.elifCount = 0;
+    ifNode->as.ifStatement.elseBlock = NULL;
+
+    // Parse the orif statements
+    while (match(p, Orif)) {
+      ifNode->as.ifStatement.elifCount++;
+      ifNode->as.ifStatement.elifs = realloc(ifNode->as.ifStatement.elifs, ifNode->as.ifStatement.elifCount * sizeof(ASTNode *));
+      expect(p, Orif);
+      expect(p, Opb);
+      ifNode->as.ifStatement.elifs[ifNode->as.ifStatement.elifCount - 1] = parseCondition(p);
+      expect(p, Clb);
+      expect(p, Do);
+      ifNode -> as.ifStatement.elifs[ifNode->as.ifStatement.elifCount - 1] = parseBlock(p);
+    }
+
+    // Else
+    if (match(p, Else)) {
+      ifNode->as.ifStatement.elseBlock = parseBlock(p);
+    }
+    return ifNode;
+  }
+  if (token->type == While) {
+    // While statements
+    /*
+    while (condition) do {
+      ...
+    }
+    */
+    expect(p, While);
+    expect(p, Opb);
+    ASTNode *condition = parseCondition(p);
+    expect(p, Clb);
+    expect(p, Do);
+    ASTNode *block = parseBlock(p);
+    ASTNode *whileNode = malloc(sizeof(ASTNode));
+    whileNode->type = AST_WHILE;
+    whileNode->as.whileStatement.whileBlock = block;
+    return whileNode;
   }
 }
