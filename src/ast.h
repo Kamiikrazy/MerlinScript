@@ -226,4 +226,21 @@ ASTNode *primaryParser(Parser *p) {
     whileNode->as.whileStatement.whileBlock = block;
     return whileNode;
   }
+
+  if (token->type == For) {
+    // For statements
+    /*
+    for(i in 1, 3) do {
+      ...
+    }
+    */
+    ASTNode *forNode = malloc(sizeof(ASTNode));
+    forNode->type = AST_FOR;
+    expect(p, For);
+    expect(p, Opb);
+    if (currentToken(p)->type == Iden) {
+      throwError("Expected variable name");
+    }
+    expect(p, In);
+  }
 }

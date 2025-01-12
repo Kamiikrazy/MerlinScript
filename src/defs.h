@@ -2,8 +2,8 @@
 
 typedef enum {
     Num, Iden, Fn, Pub, Loc, If, Else, Orif, Return, Try, While, For, Pass, Break, Do, Var, Catch,
-    String, Int, Float, Bool, Null, True, False, Module, Or, And, Not, Eq, Ne, Eqeq, Lt, Gt, Le, Ge,
-    Add, Sub, Mul, Div, Mod, Inc, Dec, Muleq, Diveq,
+    String, Int, Float, Bool, Null, True, False, Module, Or, And, Not, In, Eq, Ne, Eqeq, Lt, Gt, Le, Ge,
+    Add, Sub, Mul, Div, Mod, Inc, Dec, Muleq, Diveq, Addeq, Subeq
     Dot, Comma, Semcol, Col, Dbcol, Bsl, Dbbsl, Dbfsl, Hash, Opb, Clb, Opclb, Clclb,
     Huh,
 } Token;
@@ -48,6 +48,7 @@ Token classifyKeyword(const char *str) {
     if (strcmp(str, "try") == 0) return Try;
     if (strcmp(str, "while") == 0) return While;
     if (strcmp(str, "do") == 0) return Do;
+    if (strcmp(str, "in") == 0) return In;
     if (strcmp(str, "string") == 0) return String;
     if (strcmp(str, "int") == 0) return Int;
     if (strcmp(str, "float") == 0) return Float;
@@ -68,8 +69,8 @@ Token classifyOperator(const char *str, int length) {
         if (strncmp(str, "<=", 2) == 0) return Le;
         if (strncmp(str, ">=", 2) == 0) return Ge;
         if (strncmp(str, "*=", 2) == 0) return Muleq;
-        if (strncmp(str, "+=", 2) == 0) return Muleq;
-        if (strncmp(str, "-=", 2) == 0) return Sub;
+        if (strncmp(str, "+=", 2) == 0) return Addeq;
+        if (strncmp(str, "-=", 2) == 0) return Subeq;
         if (strncmp(str, "/=", 2) == 0) return Diveq;
         if (strncmp(str, "||", 2) == 0) return Or;
     }
