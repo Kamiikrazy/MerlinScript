@@ -48,11 +48,14 @@ typedef struct ASTNode {
     } ifStatement;
 
     struct {
+      struct ASTNode *condition;
       struct ASTNode *whileBlock;
     } whileStatement;
 
     struct {
-      struct ASTNode *forBlock;
+      struct ASTNode *iterator;
+      struct ASTNode *start;
+      struct ASTNode *end;
       struct ASTNode *body;
     } forStatement;
 
@@ -215,14 +218,18 @@ ASTNode *primaryParser(Parser *p) {
       ...
     }
     */
+    ASTNode *whileNode = malloc(sizeof(ASTNode));
+    whileNode->type = AST_WHILE;
     expect(p, While);
     expect(p, Opb);
     ASTNode *condition = parseCondition(p);
+    if (!condition) {
+      throwError("Expected condition");
+    }
     expect(p, Clb);
     expect(p, Do);
     ASTNode *block = parseBlock(p);
-    ASTNode *whileNode = malloc(sizeof(ASTNode));
-    whileNode->type = AST_WHILE;
+    whileNode->as.whileStatement.condition = condition;
     whileNode->as.whileStatement.whileBlock = block;
     return whileNode;
   }
@@ -241,6 +248,38 @@ ASTNode *primaryParser(Parser *p) {
     if (currentToken(p)->type == Iden) {
       throwError("Expected variable name");
     }
+    // Variable for iteration
+    ASTNode *variable = malloc(sizeof(ASTNode));
+    variable->type = AST_VAR_REF;
+    variable->as.varRef.varName = currentToken(p)->value;
+    advance(p); // Skip
     expect(p, In);
+    // Starting range
+    if (currentToken(p)->type != Num) {
+      throwError("Invalid range");
+    }
+    ASTNode *start = malloc(sizeof(ASTNode));
+    start->type = AST_LITERAL;
+    start->as.literal.value = currentToken(p)->value;
+    advance(p); // Skip
+    expect(p, Comma);
+    // Ending range
+    if (currentToken(p)->type != Num) {
+       throwError("Invalid range");
+    }
+    ASTNode *end = malloc(sizeof(ASTNode));
+    end->type = AST_LITERAL;
+    end->as.literal.value = currentToken(p)->value;
+    advance(p); // Skip
+    expect(p, Clb);
+    expect(p, Do);
+    // Body
+    ASTNode *body = parseBlock(p);
+    forNode->as.forStatement.iterator = variable;
+    forNode->as.forStatement.start = start;
+    forNode->as.forStatement.end = end;
+    forNode->as.forStatement.body = body;
+
+    return forNode;
   }
 }
